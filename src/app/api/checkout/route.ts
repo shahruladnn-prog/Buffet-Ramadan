@@ -40,7 +40,14 @@ export async function POST(req: NextRequest) {
                 phone: client_phone,
                 full_name: client_name,
                 // Tracking data embedded in personal_code for webhook parsing
-                personal_code: `Date:${booking_date}|A:${adults}|K:${kids}|S:${seniors}|F:${focKids}|T:${table_size}`,
+                // Compact format: DDMMYY|Adults|Kids|Seniors|FocKids (stays well under 32 chars)
+                personal_code: (() => {
+                    const d = new Date(booking_date)
+                    const dd = String(d.getDate()).padStart(2, '0')
+                    const mm = String(d.getMonth() + 1).padStart(2, '0')
+                    const yy = String(d.getFullYear()).slice(-2)
+                    return `${dd}${mm}${yy}|${adults}|${kids}|${seniors}|${focKids}`
+                })(),
             },
             purchase: {
                 timezone: "Asia/Kuala_Lumpur",
