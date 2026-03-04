@@ -13,6 +13,8 @@ export async function POST(req: NextRequest) {
             booking_date,
             adults,
             kids,
+            seniors = 0,
+            focKids = 0,
             table_size,
             language
         } = await req.json();
@@ -37,15 +39,15 @@ export async function POST(req: NextRequest) {
                 email: client_email,
                 phone: client_phone,
                 full_name: client_name,
-                // Optional tracking data
-                personal_code: `Date:${booking_date}|A:${adults}|K:${kids}|T:${table_size}`,
+                // Tracking data embedded in personal_code for webhook parsing
+                personal_code: `Date:${booking_date}|A:${adults}|K:${kids}|S:${seniors}|F:${focKids}|T:${table_size}`,
             },
             purchase: {
                 timezone: "Asia/Kuala_Lumpur",
                 currency: "MYR",
                 products: [
                     {
-                        name: `${language === "ms" ? "Tempahan Meja" : "Table Reservation"} (${booking_date}) - ${adults} Dewasa, ${kids} Kanak-kanak`,
+                        name: `${language === "ms" ? "Tempahan Meja" : "Table Reservation"} (${booking_date}) - ${adults} Dewasa, ${kids} Kanak-kanak, ${seniors} Warga Emas/OKU, ${focKids} FOC Kids`,
                         price: Math.round(amount * 100), // Chip expects amount in cents
                         quantity: 1,
                         tax_percent: 6, // Automatically adds 6% SST

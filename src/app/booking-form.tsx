@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { format, addDays } from "date-fns"
-import { CalendarIcon, Users, AlertCircle, CheckCircle2, ChevronRight, Globe, Baby, X, User, Phone, Mail } from "lucide-react"
+import { CalendarIcon, Users, AlertCircle, CheckCircle2, ChevronRight, Globe, Baby, X, User, Phone, Mail, FileText, CheckSquare, HeartIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import Image from "next/image"
 
@@ -25,6 +25,8 @@ const translations = {
         dateLabel: "Tarikh",
         adults: "Dewasa",
         kids: "Kanak-kanak",
+        senior: "Warga Emas/OKU",
+        focKids: "FOC Kanak-kanak",
         moreThan10: "Lebih dari 10",
         enterAmount: "Jumlah...",
         clear: "Batal",
@@ -44,7 +46,7 @@ const translations = {
         ramadanDay: "Ramadan Ke",
         remainingPax: "pax tinggal",
         bookNow: "Pilih",
-        focNote: "* Kanak-kanak 4 tahun dan ke bawah adalah Percuma (FOC) tetapi tiada tempat duduk khas disediakan.",
+        focNote: "Peringatan Mesra untuk Kanak-Kanak FOC (5 Tahun & Ke Bawah):",
         weekdayPromoApplied: "✨ Promo Hari Biasa Terpakai! (Diskaun RM10/Dewasa)",
         viewMenu: "Lihat Menu",
         guestDetails: "Butiran Tetamu",
@@ -54,6 +56,18 @@ const translations = {
         nameErr: "Sila masukkan nama anda.",
         phoneErr: "Sila masukkan nombor telefon yang sah (contoh: 0123456789).",
         emailErr: "Sila masukkan alamat e-mel yang sah.",
+        hasFocKids: "5 Tahun ke Bawah (FOC berkerusi sendiri)",
+        yes: "Ya",
+        no: "Tidak",
+        termsHeader: "Terma & Syarat Tempahan",
+        termsAgree: "Saya Bersetuju",
+        termsDisagree: "Kembali",
+        focExcessTitle: "Had Maksimum Kanak-Kanak FOC",
+        focExcessMsg1: "Setiap 2 dewasa hanya layak untuk 1 tempat duduk FOC.",
+        focExcessMsg2: "Anda telah memilih {requested} FOC, tetapi kelayakan anda adalah {allowed}.",
+        focExcessMsg3: "Baki {excess} kanak-kanak akan ditambah ke ruangan Kanak-Kanak (Berbayar RM28). Teruskan?",
+        proceed: "Teruskan",
+        cancel: "Batal",
     },
     en: {
         title: "RAMADAN BUFFET",
@@ -64,6 +78,8 @@ const translations = {
         dateLabel: "Date",
         adults: "Adults",
         kids: "Kids (5-12 yo)",
+        senior: "Senior / Disabled (OKU)",
+        focKids: "FOC Kids",
         moreThan10: "More than 10",
         enterAmount: "Amount...",
         clear: "Clear",
@@ -83,7 +99,7 @@ const translations = {
         ramadanDay: "Day",
         remainingPax: "pax remaining",
         bookNow: "Select",
-        focNote: "* Kids aged 4 and below are Free of Charge (FOC) but no designated seat is provided.",
+        focNote: "Friendly Reminder for FOC Kids (5 Years & Below):",
         weekdayPromoApplied: "✨ Weekday Promo Applied! (RM10 off/Adult)",
         viewMenu: "View Menu",
         guestDetails: "Guest Details",
@@ -93,6 +109,18 @@ const translations = {
         nameErr: "Please enter your name.",
         phoneErr: "Please enter a valid phone number (e.g., 0123456789).",
         emailErr: "Please enter a valid email address.",
+        hasFocKids: "5 Years Old & Below (FOC with Own Seat)",
+        yes: "Yes",
+        no: "No",
+        termsHeader: "Booking Terms & Conditions",
+        termsAgree: "I Agree",
+        termsDisagree: "Go Back",
+        focExcessTitle: "Maximum FOC Limit Exceeded",
+        focExcessMsg1: "Every 2 adults are entitled to 1 FOC seat.",
+        focExcessMsg2: "You selected {requested} FOC, but your allowance is {allowed}.",
+        focExcessMsg3: "The remaining {excess} child(ren) will be added to the Kids (Paid RM28) category. Proceed?",
+        proceed: "Proceed",
+        cancel: "Cancel",
     }
 }
 
@@ -106,6 +134,16 @@ export function BookingForm({ ramadanDates }: { ramadanDates: any[] }) {
     const [adultCustom, setAdultCustom] = useState<string>("")
     const [kidSelect, setKidSelect] = useState<string>("")
     const [kidCustom, setKidCustom] = useState<string>("")
+    const [seniorSelect, setSeniorSelect] = useState<string>("")
+    const [seniorCustom, setSeniorCustom] = useState<string>("")
+    const [focSelect, setFocSelect] = useState<string>("")
+    const [focCustom, setFocCustom] = useState<string>("")
+    const [isFocKidsVisible, setIsFocKidsVisible] = useState<boolean>(false)
+    const [isTermsOpen, setIsTermsOpen] = useState(false)
+    const [isFocTermsOpen, setIsFocTermsOpen] = useState(false)
+    const [hasAgreedTerms, setHasAgreedTerms] = useState(false)
+    const [focExcessData, setFocExcessData] = useState<{ requested: number, allowed: number, excess: number } | null>(null)
+
     const [guestName, setGuestName] = useState("")
     const [guestPhone, setGuestPhone] = useState("")
     const [guestEmail, setGuestEmail] = useState("")
@@ -116,6 +154,8 @@ export function BookingForm({ ramadanDates }: { ramadanDates: any[] }) {
         available: boolean;
         adults: number;
         kids: number;
+        seniors: number;
+        focKids: number;
         totalAmount: number;
         hasDiscount: boolean;
     } | null>(null)
@@ -125,7 +165,7 @@ export function BookingForm({ ramadanDates }: { ramadanDates: any[] }) {
         return day >= 1 && day <= 4 // Monday(1) to Thursday(4)
     }
 
-    const handleCheck = () => {
+    const triggerCheckAvailability = () => {
         if (!date) {
             toast.error(t.missingInfo, { description: t.missingInfoDesc })
             return
@@ -133,15 +173,93 @@ export function BookingForm({ ramadanDates }: { ramadanDates: any[] }) {
 
         const adults = adultSelect === "custom" ? parseInt(adultCustom) || 0 : parseInt(adultSelect) || 0
         const kids = kidSelect === "custom" ? parseInt(kidCustom) || 0 : parseInt(kidSelect) || 0
-        const totalPax = adults + kids
+        const seniors = seniorSelect === "custom" ? parseInt(seniorCustom) || 0 : parseInt(seniorSelect) || 0
 
-        if (totalPax < 3) {
+        const payablePax = adults + kids + seniors
+        if (payablePax < 3) {
             toast.error(t.minPaxErr, { description: t.minPaxDesc })
             return
         }
 
-        const selectedDateObj = ramadanDates.find(d => d.date.getTime() === date.getTime())
-        if (selectedDateObj && totalPax > selectedDateObj.remainingPax) {
+        setIsTermsOpen(true)
+    }
+
+    const agreeAndProceedCheck = () => {
+        setIsTermsOpen(false)
+        handleCheck()
+    }
+
+    const handleFocClick = (val: boolean) => {
+        if (val) {
+            setIsFocTermsOpen(true)
+        } else {
+            setIsFocKidsVisible(false)
+            setFocSelect("")
+        }
+    }
+
+    const agreeFocAndShowSelector = () => {
+        setIsFocTermsOpen(false)
+        setIsFocKidsVisible(true)
+    }
+
+    const handleFocSelection = (val: string) => {
+        if (val === "custom") {
+            setFocSelect("custom")
+            setFocCustom("")
+            return
+        }
+
+        const adults = adultSelect === "custom" ? parseInt(adultCustom) || 0 : parseInt(adultSelect) || 0
+        const requestedFoc = parseInt(val) || 0
+        const allowedFreeFoc = Math.floor(adults / 2)
+
+        if (requestedFoc > allowedFreeFoc && requestedFoc > 0) {
+            setFocExcessData({ requested: requestedFoc, allowed: allowedFreeFoc, excess: requestedFoc - allowedFreeFoc })
+        } else {
+            setFocSelect(val)
+        }
+    }
+
+    const handleFocCustomBlur = () => {
+        const adults = adultSelect === "custom" ? parseInt(adultCustom) || 0 : parseInt(adultSelect) || 0
+        const requestedFoc = parseInt(focCustom) || 0
+        const allowedFreeFoc = Math.floor(adults / 2)
+
+        if (requestedFoc > allowedFreeFoc && requestedFoc > 0) {
+            setFocExcessData({ requested: requestedFoc, allowed: allowedFreeFoc, excess: requestedFoc - allowedFreeFoc })
+        }
+    }
+
+    const confirmFocExcess = () => {
+        if (!focExcessData) return
+
+        setFocSelect(focExcessData.allowed.toString())
+
+        const currentKids = kidSelect === "custom" ? parseInt(kidCustom) || 0 : parseInt(kidSelect) || 0
+        const newKids = currentKids + focExcessData.excess
+
+        if (newKids > 10) {
+            setKidSelect("custom")
+            setKidCustom(newKids.toString())
+        } else {
+            setKidSelect(newKids.toString())
+            setKidCustom("")
+        }
+
+        setFocExcessData(null)
+    }
+
+    const handleCheck = () => {
+        const adults = adultSelect === "custom" ? parseInt(adultCustom) || 0 : parseInt(adultSelect) || 0
+        const kids = kidSelect === "custom" ? parseInt(kidCustom) || 0 : parseInt(kidSelect) || 0
+        const seniors = seniorSelect === "custom" ? parseInt(seniorCustom) || 0 : parseInt(seniorSelect) || 0
+        const focKids = focSelect === "custom" ? parseInt(focCustom) || 0 : parseInt(focSelect) || 0
+
+        const payablePax = adults + kids + seniors
+
+        const selectedDateObj = ramadanDates.find(d => date && d.date.getTime() === date.getTime())
+        if (selectedDateObj && payablePax > selectedDateObj.remainingPax) {
             toast.error(lang === 'ms' ? "Kapasiti Tidak Mencukupi" : "Insufficient Capacity", {
                 description: lang === 'ms'
                     ? `Maaf, hanya tinggal ${selectedDateObj.remainingPax} kekosongan untuk tarikh ini.`
@@ -153,15 +271,18 @@ export function BookingForm({ ramadanDates }: { ramadanDates: any[] }) {
         setIsChecking(true)
 
         setTimeout(() => {
-            const isPromoDay = isWeekday(date)
+            const isPromoDay = isWeekday(date!)
             const adultPrice = isPromoDay ? 48 : 58
             const kidPrice = 28
-            const totalAmount = (adults * adultPrice) + (kids * kidPrice)
+            const seniorPrice = 28
+            const totalAmount = (adults * adultPrice) + (kids * kidPrice) + (seniors * seniorPrice)
 
             setAvailability({
                 available: true,
                 adults,
                 kids,
+                seniors,
+                focKids,
                 totalAmount,
                 hasDiscount: isPromoDay && adults > 0
             })
@@ -175,11 +296,17 @@ export function BookingForm({ ramadanDates }: { ramadanDates: any[] }) {
         setAdultCustom("")
         setKidSelect("")
         setKidCustom("")
+        setSeniorSelect("")
+        setSeniorCustom("")
+        setFocSelect("")
+        setFocCustom("")
+        setIsFocKidsVisible(false)
         setAvailability(null)
         setGuestName("")
         setGuestPhone("")
         setGuestEmail("")
         setFormErrors({})
+        setHasAgreedTerms(false)
     }
 
     const handleProceedPayment = async () => {
@@ -213,7 +340,9 @@ export function BookingForm({ ramadanDates }: { ramadanDates: any[] }) {
                     booking_date: format(date as Date, "yyyy-MM-dd"),
                     adults: availability?.adults,
                     kids: availability?.kids,
-                    table_size: (availability?.adults || 0) + (availability?.kids || 0),
+                    seniors: availability?.seniors,
+                    focKids: availability?.focKids,
+                    table_size: (availability?.adults || 0) + (availability?.kids || 0) + (availability?.seniors || 0),
                     language: lang
                 })
             });
@@ -436,14 +565,106 @@ export function BookingForm({ ramadanDates }: { ramadanDates: any[] }) {
                                                     )}
                                                 </div>
 
+                                                {/* Senior / OKU Selector */}
+                                                <div className="space-y-3 sm:col-span-2">
+                                                    <Label className="text-gray-800 font-bold flex items-center gap-1">
+                                                        {t.senior} <HeartIcon className="w-4 h-4 text-gray-400" />
+                                                    </Label>
+                                                    <Select value={seniorSelect} onValueChange={setSeniorSelect}>
+                                                        <SelectTrigger className="h-14 w-full border-2 border-[#e2ece5] bg-[#f8fafc] rounded-xl text-lg font-bold text-[#114b24] shadow-sm transition-all focus:ring-[#f39c12]">
+                                                            <SelectValue placeholder={t.selectPaxPlaceholder} />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {[0, 1, 2, 3, 4, 5].map(n => (
+                                                                <SelectItem key={n} value={n.toString()}>{n} pax (RM28)</SelectItem>
+                                                            ))}
+                                                            <SelectItem value="custom">{t.moreThan10}</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                    {seniorSelect === "custom" && (
+                                                        <Input
+                                                            type="number"
+                                                            min="6"
+                                                            placeholder={t.enterAmount}
+                                                            value={seniorCustom}
+                                                            onChange={(e) => setSeniorCustom(e.target.value)}
+                                                            className="h-12 mt-2 rounded-xl bg-[#f8fafc] border-2 border-[#e2ece5] text-[#114b24] font-bold"
+                                                        />
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div className="text-xs text-gray-400 italic font-medium leading-relaxed bg-gray-50 p-3 rounded-lg">
-                                            {t.focNote}
+
+                                            {/* FOC Kids Selector Button Toggle */}
+                                            <div className="mt-6 border-t-2 border-dashed border-[#e2ece5] pt-5">
+                                                <Label className="text-[#114b24] font-bold block mb-3 text-[15px]">{t.hasFocKids}</Label>
+                                                {!isFocKidsVisible ? (
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            className="flex-1 border-[#1e5631] text-[#1e5631] font-bold hover:bg-[#e2ece5]"
+                                                            onClick={() => handleFocClick(true)}
+                                                        >
+                                                            {t.yes}
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            className="flex-1 border-gray-300 text-gray-500 font-bold hover:bg-gray-100"
+                                                            onClick={() => handleFocClick(false)}
+                                                        >
+                                                            {t.no}
+                                                        </Button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                                                        <Select value={focSelect} onValueChange={handleFocSelection}>
+                                                            <SelectTrigger className="h-14 w-full border-2 border-[#f39c12] bg-[#fff1e6] rounded-xl text-lg font-bold text-[#d68910] shadow-sm transition-all focus:ring-[#114b24]">
+                                                                <SelectValue placeholder={t.focKids} />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {[1, 2, 3, 4, 5].map(n => (
+                                                                    <SelectItem key={n} value={n.toString()}>{n} orang</SelectItem>
+                                                                ))}
+                                                                <SelectItem value="custom">{"> 5 orang"}</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+
+                                                        {focSelect === "custom" && (
+                                                            <Input
+                                                                type="number"
+                                                                min="6"
+                                                                placeholder={t.enterAmount}
+                                                                value={focCustom}
+                                                                onChange={(e) => setFocCustom(e.target.value)}
+                                                                onBlur={handleFocCustomBlur}
+                                                                className="h-12 mt-2 rounded-xl bg-[#fff1e6] border-2 border-[#f39c12] text-[#d68910] font-bold"
+                                                            />
+                                                        )}
+
+                                                        {(focSelect === "custom" ? parseInt(focCustom) : parseInt(focSelect)) > 1 && (
+                                                            <div className="text-xs text-[#d68910] italic font-medium leading-relaxed bg-[#fff1e6] p-3 rounded-lg border border-[#f39c12]/30 mt-2 flex items-start gap-2">
+                                                                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                                                                <span>
+                                                                    {lang === 'ms'
+                                                                        ? "Sila pastikan anda memperuntukkan FOC Kids sebagai Kanak-Kanak Berbayar (Kids) jika mereka memerlukan tempat duduk tambahan."
+                                                                        : "Please ensure to allocate FOC Kids as Paid Kids if they require their own seats."}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                        <Button
+                                                            variant="ghost"
+                                                            className="text-gray-400 text-sm h-8 mt-1 p-0 hover:bg-transparent hover:text-red-500 underline"
+                                                            onClick={() => { setIsFocKidsVisible(false); setFocSelect(""); setFocCustom(""); }}
+                                                        >
+                                                            {t.clear}
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </div>
+
                                         </div>
 
                                         <Button
-                                            onClick={handleCheck}
+                                            onClick={triggerCheckAvailability}
                                             disabled={isChecking || !date}
                                             className="w-full h-14 text-lg font-bold bg-[#1e5631] hover:bg-[#114b24] text-white rounded-2xl shadow-lg transition-transform active:scale-95"
                                         >
@@ -458,7 +679,7 @@ export function BookingForm({ ramadanDates }: { ramadanDates: any[] }) {
                                             </div>
                                             <h3 className="text-xl font-bold text-green-800 mb-1">{t.tableAvailable}</h3>
                                             <p className="text-green-600 font-medium">
-                                                {date && format(date, "dd MMM yyyy")} • {availability.adults + availability.kids} Pax
+                                                {date && format(date, "dd MMM yyyy")} • {availability.adults + availability.kids + availability.seniors} Pax
                                             </p>
                                         </div>
 
@@ -480,6 +701,22 @@ export function BookingForm({ ramadanDates }: { ramadanDates: any[] }) {
                                                     <span className="font-medium">{t.kids} (x{availability.kids})</span>
                                                     <span className="font-bold text-gray-900">
                                                         RM {availability.kids * 28}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {availability.seniors > 0 && (
+                                                <div className="p-4 flex justify-between items-center text-gray-600 bg-gray-50/30">
+                                                    <span className="font-medium">{t.senior} (x{availability.seniors})</span>
+                                                    <span className="font-bold text-gray-900">
+                                                        RM {availability.seniors * 28}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {availability.focKids > 0 && (
+                                                <div className="p-4 flex justify-between items-center text-gray-600 bg-orange-50/50">
+                                                    <span className="font-medium text-[#d68910]">{t.focKids} (x{availability.focKids})</span>
+                                                    <span className="font-bold text-[#d68910]">
+                                                        FOC
                                                     </span>
                                                 </div>
                                             )}
@@ -581,6 +818,121 @@ export function BookingForm({ ramadanDates }: { ramadanDates: any[] }) {
                     </div>
                 </div>
             </div>
+
+            {/* FOC Terms Modal */}
+            <Dialog open={isFocTermsOpen} onOpenChange={setIsFocTermsOpen}>
+                <DialogContent className="sm:max-w-md p-6 bg-white rounded-3xl border-0 shadow-2xl">
+                    <DialogTitle className="text-[#114b24] text-xl font-bold border-b pb-4 mb-4 flex items-center gap-2">
+                        <AlertCircle className="w-6 h-6 text-[#f39c12]" />
+                        {t.focNote}
+                    </DialogTitle>
+                    <div className="space-y-3 text-sm text-gray-700 leading-relaxed font-medium">
+                        {lang === 'ms' ? (
+                            <ul className="list-disc pl-5 space-y-2 marker:text-[#f39c12]">
+                                <li>Setiap <b>2 Pelanggan Dewasa</b> dibenarkan membawa maksimum <b>2 Kanak-Kanak FOC (5 Tahun & Ke Bawah)</b>.</li>
+                                <li>Namun, <b>tempat duduk percuma hanya untuk 1 Kanak-Kanak FOC</b> bagi setiap 2 Dewasa (tertakluk kepada kekosongan).</li>
+                                <li>Jika anda membawa 2 Kanak-Kanak FOC tetapi <b>memerlukan kerusi untuk kedua-duanya</b>, sila daftar anak kedua di ruangan <b>'Kanak-Kanak' (Berbayar RM28)</b>.</li>
+                                <li>Jika tidak, kanak-kanak FOC yang kedua haruslah dipangku (tidak diberikan kerusi).</li>
+                                <li>Kereta sorong bayi (stroller) dibenarkan, tetapi pastikan ia tidak menghalang laluan demi keselesaan dan keselamatan bersama.</li>
+                            </ul>
+                        ) : (
+                            <ul className="list-disc pl-5 space-y-2 marker:text-[#f39c12]">
+                                <li>Each <b>2 Adult diners</b> are allowed to bring a maximum of <b>2 FOC Kids (5 Years Old & Below)</b>.</li>
+                                <li>However, <b>free seating is only provided for 1 FOC Kid</b> per 2 Adults (subject to availability).</li>
+                                <li>If you bring 2 FOC Kids and <b>require seats for both</b>, please register the second child under <b>'Kids' (Paid RM28)</b>.</li>
+                                <li>Otherwise, the second FOC Kid must sit on an adult's lap (no seat provided).</li>
+                                <li>Baby strollers are allowed, but please ensure they do not block pathways for everyone's safety and comfort.</li>
+                            </ul>
+                        )}
+                    </div>
+                    <DialogFooter className="mt-6 flex flex-row items-center gap-3">
+                        <Button variant="outline" onClick={() => { setIsFocTermsOpen(false); setFocSelect(""); setIsFocKidsVisible(false); }} className="flex-1 rounded-xl h-12 font-bold text-gray-500 border-2">
+                            {t.termsDisagree}
+                        </Button>
+                        <Button onClick={agreeFocAndShowSelector} className="flex-1 rounded-xl h-12 font-bold bg-[#1e5631] hover:bg-[#114b24] text-white">
+                            {t.termsAgree}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Main Pre-booking T&C Modal */}
+            <Dialog open={isTermsOpen} onOpenChange={setIsTermsOpen}>
+                <DialogContent className="sm:max-w-lg p-6 bg-[#f4fdf8] rounded-3xl border-0 shadow-2xl overflow-y-auto max-h-[85vh]">
+                    <DialogTitle className="text-[#114b24] text-2xl font-black border-b border-[#e2ece5] pb-4 mb-5 flex items-center gap-3">
+                        <CheckSquare className="w-8 h-8 text-[#1e5631]" />
+                        {t.termsHeader}
+                    </DialogTitle>
+                    <div className="space-y-4 text-sm text-gray-700 font-medium">
+                        {lang === 'ms' ? (
+                            <ul className="space-y-4">
+                                <li className="flex gap-3"><div className="w-2 h-2 rounded-full bg-[#f39c12] mt-1.5 shrink-0" /><div><b>Waktu Daftar Masuk:</b> Bermula dari seawal 6:30 PM sehingga 9:30 PM.</div></li>
+                                <li className="flex gap-3"><div className="w-2 h-2 rounded-full bg-[#f39c12] mt-1.5 shrink-0" /><div><b>Pertukaran Tarikh:</b> Permohonan pertukaran tarikh mesti dibuat sekurang-kurangnya 2 hari sebelum tarikh tempahan (3 hari untuk tempahan melebihi 10 pax). Tertakluk kepada kekosongan meja.</div></li>
+                                <li className="flex gap-3"><div className="w-2 h-2 rounded-full bg-red-500 mt-1.5 shrink-0" /><div><b>Pembatalan Tempahan:</b> Sebarang pembatalan yang telah dibayar tidak akan dikembalikan (non-refundable).</div></li>
+                                <li className="flex gap-3"><div className="w-2 h-2 rounded-full bg-[#f39c12] mt-1.5 shrink-0" /><div><b>Add-On Kambing:</b> Penambahan lauk (add-on) kambing hanya boleh dipesan terus di kaunter semasa ketibaan anda.</div></li>
+                                <li className="flex gap-3"><div className="w-2 h-2 rounded-full bg-[#1e5631] mt-1.5 shrink-0" /><div><b>Susun Atur Meja:</b> Demi keselesaan semua tetamu, anda tidak dibenarkan sama sekali untuk mengubah susun atur meja yang telah ditetapkan.</div></li>
+                                <li className="flex gap-3"><div className="w-2 h-2 rounded-full bg-[#1e5631] mt-1.5 shrink-0" /><div><b>Bantuan Khas:</b> Jika anda memerlukan sebarang perkhidmatan atau bantuan, sila maklumkan lebih awal kepada pihak kami.</div></li>
+                                <li className="flex gap-3"><div className="w-2 h-2 rounded-full bg-red-500 mt-1.5 shrink-0" /><div><b>Elakkan Pembaziran:</b> Perhatian! Caj denda sebanyak <b className="text-red-600">RM20</b> dikenakan bagi setiap 100 gram sisa makanan yang ditinggalkan (pembaziran).</div></li>
+                                <li className="flex gap-3"><div className="w-2 h-2 rounded-full bg-[#1e5631] mt-1.5 shrink-0" /><div><b>Kemudahan Sekitar:</b> Kami menyediakan ruang surau serta tempat letak kereta (parking) di kawasan yang ditetapkan.</div></li>
+                            </ul>
+                        ) : (
+                            <ul className="space-y-4">
+                                <li className="flex gap-3"><div className="w-2 h-2 rounded-full bg-[#f39c12] mt-1.5 shrink-0" /><div><b>Check-In Time:</b> Starts as early as 6:30 PM until 9:30 PM.</div></li>
+                                <li className="flex gap-3"><div className="w-2 h-2 rounded-full bg-[#f39c12] mt-1.5 shrink-0" /><div><b>Change of Date:</b> Requests to change date must be made at least 2 days before the booking date (3 days for bookings exceeding 10 pax). Subject to table availability.</div></li>
+                                <li className="flex gap-3"><div className="w-2 h-2 rounded-full bg-red-500 mt-1.5 shrink-0" /><div><b>Booking Cancellation:</b> Any paid cancellation is strictly non-refundable.</div></li>
+                                <li className="flex gap-3"><div className="w-2 h-2 rounded-full bg-[#f39c12] mt-1.5 shrink-0" /><div><b>Lamb Add-On:</b> Additional lamb (kambing) orders can only be made directly at the counter upon your arrival.</div></li>
+                                <li className="flex gap-3"><div className="w-2 h-2 rounded-full bg-[#1e5631] mt-1.5 shrink-0" /><div><b>Table Arrangement:</b> For the comfort of all guests, you are strictly not allowed to change the assigned table arrangement.</div></li>
+                                <li className="flex gap-3"><div className="w-2 h-2 rounded-full bg-[#1e5631] mt-1.5 shrink-0" /><div><b>Special Assistance:</b> If you require any services or assistance, please inform us in advance.</div></li>
+                                <li className="flex gap-3"><div className="w-2 h-2 rounded-full bg-red-500 mt-1.5 shrink-0" /><div><b>Avoid Wastage:</b> Attention! A penalty charge of <b className="text-red-600">RM20</b> will be imposed for every 100 grams of leftover food (wastage).</div></li>
+                                <li className="flex gap-3"><div className="w-2 h-2 rounded-full bg-[#1e5631] mt-1.5 shrink-0" /><div><b>Facilities:</b> We provide a prayer room (surau) and parking in designated areas.</div></li>
+                            </ul>
+                        )}
+
+                        <div className="mt-6 p-4 bg-white border border-[#e2ece5] rounded-xl flex items-center gap-3">
+                            <FileText className="w-6 h-6 text-[#1e5631] shrink-0" />
+                            <p className="text-xs text-gray-500 italic">
+                                {lang === 'ms'
+                                    ? "Dengan menekan butang 'Saya Bersetuju', sistem akan menyemak kekosongan meja dan anda mengesahkan bahawa anda telah membaca terma."
+                                    : "By clicking 'I Agree', the system will check availability and you acknowledge that you have read our booking terms."}
+                            </p>
+                        </div>
+                    </div>
+                    <DialogFooter className="mt-8 flex flex-row items-center gap-3">
+                        <Button variant="outline" onClick={() => setIsTermsOpen(false)} className="flex-1 rounded-xl h-14 font-bold text-gray-500 border-2">
+                            {t.termsDisagree}
+                        </Button>
+                        <Button onClick={agreeAndProceedCheck} className="flex-1 rounded-xl h-14 text-lg font-bold bg-[#1e5631] hover:bg-[#114b24] text-white shadow-lg">
+                            {t.termsAgree}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* FOC Excess Warning Modal */}
+            <Dialog open={focExcessData !== null} onOpenChange={() => setFocExcessData(null)}>
+                <DialogContent className="sm:max-w-md p-6 bg-white rounded-3xl border-0 shadow-2xl">
+                    <DialogTitle className="text-red-600 text-xl font-bold border-b pb-4 mb-4 flex items-center gap-2">
+                        <AlertCircle className="w-6 h-6 text-red-500" />
+                        {t.focExcessTitle}
+                    </DialogTitle>
+                    <div className="space-y-3 text-sm text-gray-700 leading-relaxed font-medium">
+                        <p>{t.focExcessMsg1}</p>
+                        <p className="font-bold text-gray-900 bg-red-50 p-3 rounded-lg border border-red-100">
+                            {t.focExcessMsg2.replace("{requested}", focExcessData?.requested.toString() || "").replace("{allowed}", focExcessData?.allowed.toString() || "")}
+                        </p>
+                        <p>{t.focExcessMsg3.replace("{excess}", focExcessData?.excess.toString() || "")}</p>
+                    </div>
+                    <DialogFooter className="mt-6 flex flex-row items-center gap-3">
+                        <Button variant="outline" onClick={() => setFocExcessData(null)} className="flex-1 rounded-xl h-12 font-bold text-gray-500 border-2">
+                            {t.cancel}
+                        </Button>
+                        <Button onClick={confirmFocExcess} className="flex-1 rounded-xl h-12 font-bold bg-[#1e5631] hover:bg-[#114b24] text-white">
+                            {t.proceed}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
         </div>
     )
 }
