@@ -459,8 +459,7 @@ export function BookingForm({ ramadanDates }: { ramadanDates: any[] }) {
                                                 "relative flex flex-col items-start p-5 rounded-2xl border-2 transition-all duration-200 text-left overflow-hidden",
                                                 date?.getTime() === d.date.getTime()
                                                     ? "border-[#1e5631] bg-[#f4fdf8] shadow-md ring-2 ring-[#1e5631] ring-offset-2 scale-[1.02]"
-                                                    : "border-gray-200 bg-white hover:border-[#1e5631] hover:shadow-sm",
-                                                d.remainingPax === 0 && "opacity-50 cursor-not-allowed grayscale"
+                                                    : "border-gray-200 bg-white hover:border-[#1e5631] hover:shadow-sm"
                                             )}
                                         >
                                             {isPromo && (
@@ -469,8 +468,8 @@ export function BookingForm({ ramadanDates }: { ramadanDates: any[] }) {
                                                 </div>
                                             )}
 
-                                            {/* Foreground Text with Strikethrough on zero pax */}
-                                            <div className={cn("flex flex-col text-left", d.remainingPax === 0 && "opacity-50 line-through decoration-red-500 decoration-2")}>
+                                            {/* Foreground Text without Strikethrough on zero pax */}
+                                            <div className="flex flex-col text-left">
                                                 <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1 mt-2">
                                                     {t.ramadanDay} {d.ramadanDay}
                                                 </span>
@@ -485,9 +484,8 @@ export function BookingForm({ ramadanDates }: { ramadanDates: any[] }) {
                                             {/* Bottom Badge (Sold out vs Pax remaining) */}
                                             <div className="mt-auto">
                                                 {d.remainingPax === 0 ? (
-                                                    <div className="flex items-center gap-1 text-xs font-bold text-white bg-red-500 px-3 py-1.5 rounded-md shadow-sm">
-                                                        <Users className="w-3 h-3" />
-                                                        {lang === 'ms' ? 'Habis Dijual' : 'Sold Out'}
+                                                    <div className="flex items-center gap-1 text-xs font-bold text-red-600 bg-red-100 border border-red-200 px-3 py-1.5 rounded-md shadow-sm">
+                                                        {lang === 'ms' ? 'Habis Dijual 🙏' : 'Sold Out 🙏'}
                                                     </div>
                                                 ) : (
                                                     <div className="flex items-center gap-1 text-xs font-bold text-[#1e5631] bg-[#e2ece5] px-2 py-1 rounded-md">
