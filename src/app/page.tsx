@@ -3,7 +3,7 @@ import { BookingForm } from "./booking-form";
 import { format, addDays } from "date-fns";
 
 // Generate the remaining Ramadan dates (March 3 - March 18, 2026)
-export const generateRamadanDates = (availabilityMap: Record<string, number> | null) => {
+export const generateRamadanDates = (availabilityMap: Record<string, any> | null) => {
     const dates = []
     const startDate = new Date(2026, 2, 3) // March 3, 2026
     const endDate = new Date(2026, 2, 18) // March 18, 2026
@@ -13,8 +13,15 @@ export const generateRamadanDates = (availabilityMap: Record<string, number> | n
     while (currentDate <= endDate) {
         const dateString = format(currentDate, "yyyy-MM-dd")
         let pax = 0;
+        let emptyCaps: number[] = [];
+
         if (availabilityMap && availabilityMap[dateString] !== undefined) {
-            pax = availabilityMap[dateString]
+            if (typeof availabilityMap[dateString] === 'object') {
+                pax = availabilityMap[dateString].totalLeft || 0;
+                emptyCaps = availabilityMap[dateString].emptyCaps || [];
+            } else {
+                pax = availabilityMap[dateString];
+            }
         } else if (!availabilityMap) {
             pax = 600 - (day * 23) % 400
         }
@@ -23,6 +30,7 @@ export const generateRamadanDates = (availabilityMap: Record<string, number> | n
             date: new Date(currentDate),
             ramadanDay: day,
             remainingPax: pax,
+            emptyCaps: emptyCaps
         })
         currentDate = addDays(currentDate, 1)
         day++

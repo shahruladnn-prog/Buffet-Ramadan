@@ -256,17 +256,58 @@ export function BookingForm({ ramadanDates }: { ramadanDates: any[] }) {
         const kids = kidSelect === "custom" ? parseInt(kidCustom) || 0 : parseInt(kidSelect) || 0
         const seniors = seniorSelect === "custom" ? parseInt(seniorCustom) || 0 : parseInt(seniorSelect) || 0
         const focKids = focSelect === "custom" ? parseInt(focCustom) || 0 : parseInt(focSelect) || 0
-
         const payablePax = adults + kids + seniors
+        const seatTakers = adults + kids + seniors + focKids
 
         const selectedDateObj = ramadanDates.find(d => date && d.date.getTime() === date.getTime())
-        if (selectedDateObj && payablePax > selectedDateObj.remainingPax) {
+
+        // 1. Check raw capacity
+        if (selectedDateObj && seatTakers > selectedDateObj.remainingPax) {
             toast.error(lang === 'ms' ? "Kapasiti Tidak Mencukupi" : "Insufficient Capacity", {
                 description: lang === 'ms'
                     ? `Maaf, hanya tinggal ${selectedDateObj.remainingPax} kekosongan untuk tarikh ini.`
                     : `Sorry, only ${selectedDateObj.remainingPax} seats remaining for this date.`
             })
             return
+        }
+
+        // 2. Check Lenient Table Pax Minimums
+        // table 2 min 2 adults
+        // table 4 min 3 adult
+        // tbale 6 min 3 adults + kids
+        // table 8 min 4 adults + kids
+        if (selectedDateObj && selectedDateObj.emptyCaps && selectedDateObj.emptyCaps.length > 0) {
+            let availableTables = [...selectedDateObj.emptyCaps].sort((a, b) => b - a);
+            let unseated = seatTakers;
+            let adultsRemaining = adults;
+            let adultsKidsRemaining = adults + kids;
+
+            for (let i = 0; i < availableTables.length; i++) {
+                if (unseated <= 0) break;
+
+                let cap = availableTables[i];
+                let minAdults = 0;
+                let minAdultsKids = 0;
+
+                if (cap >= 8) { minAdultsKids = 4; }
+                else if (cap >= 6) { minAdultsKids = 3; }
+                else if (cap >= 4) { minAdults = 3; }
+                else if (cap >= 2) { minAdults = 2; }
+
+                // If the party satisfies the minimum requirements for this physical table size, they can take it
+                if (adultsRemaining >= minAdults && adultsKidsRemaining >= minAdultsKids) {
+                    unseated -= cap;
+                }
+            }
+
+            if (unseated > 0) {
+                toast.error(lang === 'ms' ? "Tiga Syarat Meja Minimum" : "Table Minimums Not Met", {
+                    description: lang === 'ms'
+                        ? `Maaf, saiz meja yang tinggal memerlukan bilangan minima (cth: Meja 8 perlukan 4 Dewasa+Kanak). Sila tambah pax.`
+                        : `Sorry, the remaining table sizes require a higher guest minimum (e.g. Table 8 needs 4 Adults+Kids). Please adjust pax.`
+                })
+                return
+            }
         }
 
         setIsChecking(true)
