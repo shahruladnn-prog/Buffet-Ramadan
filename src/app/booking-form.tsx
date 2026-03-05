@@ -273,8 +273,7 @@ export function BookingForm({ ramadanDates }: { ramadanDates: any[] }) {
 
         setTimeout(() => {
             const isWeekdayDate = isWeekday(date!)
-            const remainingPax = selectedDateObj ? selectedDateObj.remainingPax : 0
-            const isPromoDay = isWeekdayDate && remainingPax >= 88
+            const isPromoDay = isWeekdayDate
             const adultPrice = isPromoDay ? 48 : 58
             const kidPrice = 28
             const seniorPrice = 28
@@ -450,7 +449,7 @@ export function BookingForm({ ramadanDates }: { ramadanDates: any[] }) {
 
                             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                                 {ramadanDates.map((d, i) => {
-                                    const isPromo = isWeekday(d.date) && d.remainingPax >= 88
+                                    const isPromo = isWeekday(d.date)
                                     return (
                                         <button
                                             key={i}
