@@ -453,11 +453,17 @@ export function BookingForm({ ramadanDates }: { ramadanDates: any[] }) {
                                     return (
                                         <button
                                             key={i}
-                                            disabled={d.remainingPax === 0}
-                                            onClick={() => setDate(d.date)}
+                                            onClick={(e) => {
+                                                if (d.remainingPax === 0) {
+                                                    e.preventDefault()
+                                                    return
+                                                }
+                                                setDate(d.date)
+                                            }}
                                             className={cn(
                                                 "relative flex flex-col items-start p-5 rounded-2xl border-2 transition-all duration-200 text-left overflow-hidden",
-                                                date?.getTime() === d.date.getTime()
+                                                d.remainingPax === 0 ? "cursor-not-allowed border-gray-200 bg-white" : "",
+                                                date?.getTime() === d.date.getTime() && d.remainingPax > 0
                                                     ? "border-[#1e5631] bg-[#f4fdf8] shadow-md ring-2 ring-[#1e5631] ring-offset-2 scale-[1.02]"
                                                     : "border-gray-200 bg-white hover:border-[#1e5631] hover:shadow-sm"
                                             )}
