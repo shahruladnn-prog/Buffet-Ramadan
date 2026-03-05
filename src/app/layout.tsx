@@ -15,8 +15,13 @@ const geistMono = Geist_Mono({
 import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
-  title: "Gopeng Glamping Park Buffet RSVP",
-  description: "Reserve your table online.",
+  title: "Buffet Ramadan 2026 | Gopeng Glamping Park",
+  description: "Tempah meja buffet Ramadan anda secara dalam talian di Gopeng Glamping Park, Perak.",
+  icons: {
+    icon: "/ggp-logo.png",
+    shortcut: "/ggp-logo.png",
+    apple: "/ggp-logo.png",
+  },
 };
 
 export default function RootLayout({
