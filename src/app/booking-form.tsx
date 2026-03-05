@@ -468,18 +468,33 @@ export function BookingForm({ ramadanDates }: { ramadanDates: any[] }) {
                                                     {lang === 'ms' ? 'Diskaun RM10/dewasa' : 'RM10 Off/adult'}
                                                 </div>
                                             )}
-                                            <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1 mt-2">
-                                                {t.ramadanDay} {d.ramadanDay}
-                                            </span>
-                                            <span className="text-2xl font-extrabold text-[#114b24]">
-                                                {format(d.date, "dd MMM")}
-                                            </span>
-                                            <span className="text-sm text-gray-500 font-medium mb-4">
-                                                {format(d.date, "EEEE, yyyy")}
-                                            </span>
-                                            <div className="mt-auto flex items-center gap-1 text-xs font-bold text-[#1e5631] bg-[#e2ece5] px-2 py-1 rounded-md">
-                                                <Users className="w-3 h-3" />
-                                                {d.remainingPax} {t.remainingPax}
+
+                                            {/* Foreground Text with Strikethrough on zero pax */}
+                                            <div className={cn("flex flex-col text-left", d.remainingPax === 0 && "opacity-50 line-through decoration-red-500 decoration-2")}>
+                                                <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1 mt-2">
+                                                    {t.ramadanDay} {d.ramadanDay}
+                                                </span>
+                                                <span className="text-2xl font-extrabold text-[#114b24]">
+                                                    {format(d.date, "dd MMM")}
+                                                </span>
+                                                <span className="text-sm text-gray-500 font-medium mb-4">
+                                                    {format(d.date, "EEEE, yyyy")}
+                                                </span>
+                                            </div>
+
+                                            {/* Bottom Badge (Sold out vs Pax remaining) */}
+                                            <div className="mt-auto">
+                                                {d.remainingPax === 0 ? (
+                                                    <div className="flex items-center gap-1 text-xs font-bold text-white bg-red-500 px-3 py-1.5 rounded-md shadow-sm">
+                                                        <Users className="w-3 h-3" />
+                                                        {lang === 'ms' ? 'Habis Dijual' : 'Sold Out'}
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-1 text-xs font-bold text-[#1e5631] bg-[#e2ece5] px-2 py-1 rounded-md">
+                                                        <Users className="w-3 h-3" />
+                                                        {d.remainingPax} {t.remainingPax}
+                                                    </div>
+                                                )}
                                             </div>
                                         </button>
                                     )
